@@ -1,0 +1,56 @@
+version: '3'
+
+x-common-variables:
+    &common-variables
+    TZ: "Europe/Moscow"
+    # MYSQL_HOST: "mysql"
+    # MYSQL_DATABASE: "flask"
+    # MYSQL_USER: "flask"
+    # MYSQL_PASSWORD: random_pass
+    # MYSQL_ROOT_PASSWORD: "random_pass"
+
+
+services:
+
+    app:
+        build: ./protection_installer
+        restart: unless-stopped
+        environment:
+            <<: *common-variables
+        volumes:
+            - ./protection_installer/app:/app
+        # links:
+        #     - mysql
+        # depends_on:
+        #     - mysql
+        ports:
+            - "8000:8000"
+
+    # mysql:
+    #     container_name: flask_mysql
+    #     image: mysql:5.7
+    #     volumes:
+    #         - mysql-data:/var/lib/mysql
+    #     restart: unless-stopped
+    #     # ports:
+    #     #   - "3306:3306"
+    #     environment:
+    #         <<: *common-variables
+
+    # phpmyadmin:
+    #     depends_on:
+    #         - mysql
+    #     image: phpmyadmin/phpmyadmin:latest
+    #     container_name: flask_phpmyadmin
+    #     restart: unless-stopped
+    #     ports:
+    #         - "5010:80"
+    #     environment:
+    #         PMA_HOST: mysql
+    #         PMA_USER: flask
+    #         PMA_PASSWORD: random_pass
+    #         MYSQL_ROOT_PASSWORD: random_pass
+
+# volumes:
+#     mysql-data:
+#         driver: local
