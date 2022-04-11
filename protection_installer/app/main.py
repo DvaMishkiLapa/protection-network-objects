@@ -5,7 +5,6 @@ from flask import Flask, jsonify, request
 from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
 from jsonschema import ValidationError, validate
-from sqlalchemy.exc import IntegrityError
 
 from logger import create_logger
 
@@ -70,6 +69,10 @@ def create_tables():
 
 
 class Protect(Resource):
+    def __init__(self):
+        self.protected_objects = {}
+        self.__db_to_ram()
+
     def post(self):
         try:
             validate(request.json, schema)
@@ -96,30 +99,27 @@ class Protect(Resource):
             'end_protect': end_protect_datatime
         }
         check_row = ProtectedObjects.query.filter_by(id=content['ID'])
-        logger.debug(check_row.scalar())
         if check_row.scalar() is None:
             db.session.add(ProtectedObjects(**new_info))
+            db.session.commit()
         else:
             logger.debug(f'Duplicate ID {content["ID"]}, update')
             check_row.update(new_info)
-        db.session.commit()
+            db.session.commit()
+            self.protected_objects.update({
+                content['ID']: {
+                    'DEFENSE': content['DEFENSE'],
+                    'START_PROTECTION': now_datatime.strftime('%m-%d-%Y, %H:%M:%S'),
+                    'END_PROTECTION': end_protect_datatime.strftime('%m-%d-%Y, %H:%M:%S')
+                }
+            })
         return {'ID': content['ID'], 'result': 'ok'}, 200
 
     def __cmd_pull(self):
         logger.debug(f'PULL')
         self.__del_old_protect()
-        objects = ProtectedObjects.query.all()
-        response = {}
-        for ob in objects:
-            response.update({
-                ob.id: {
-                    'DEFENSE': ob.defense,
-                    'START_PROTECTION': ob.start_protect.strftime('%m-%d-%Y, %H:%M:%S'),
-                    'END_PROTECTION': ob.end_protect.strftime('%m-%d-%Y, %H:%M:%S')
-                }
-            })
-        response = {k: response[k] for k in sorted(response)}
-        return response, 200
+        self.protected_objects = {k: self.protected_objects[k] for k in sorted(self.protected_objects)}
+        return self.protected_objects, 200
 
     def __del_old_protect(self):
         logger.debug(f'Del old protect objects')
@@ -128,7 +128,20 @@ class Protect(Resource):
         for ob in objects:
             if ob.end_protect < now_datatime:
                 ProtectedObjects.query.filter_by(id=ob.id).delete()
+                self.protected_objects.pop(ob.id, None)
         db.session.commit()
+
+    def __db_to_ram(self):
+        objects = ProtectedObjects.query.all()
+        self.protected_objects.clear()
+        for ob in objects:
+            self.protected_objects.update({
+                ob.id: {
+                    'DEFENSE': ob.defense,
+                    'START_PROTECTION': ob.start_protect.strftime('%m-%d-%Y, %H:%M:%S'),
+                    'END_PROTECTION': ob.end_protect.strftime('%m-%d-%Y, %H:%M:%S')
+                }
+            })
 
 
 api.add_resource(Protect, '/')
