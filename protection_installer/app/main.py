@@ -1,12 +1,11 @@
 import os
 from datetime import datetime, timedelta
-from urllib import response
 
 from flask import Flask, jsonify, request
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.exc import IntegrityError
 from flask_restful import Api, Resource
+from flask_sqlalchemy import SQLAlchemy
 from jsonschema import ValidationError, validate
+from sqlalchemy.exc import IntegrityError
 
 from logger import create_logger
 
