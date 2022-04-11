@@ -87,6 +87,7 @@ class Protect(Resource):
 
     def __cmd_set(self, content):
         logger.debug(f'SET ID: {content["ID"]}, DEFENSE: {content["DEFENSE"]}, TTL: {content["TTL"]}')
+        self.__del_old_protect()
         now_datatime = datetime.now()
         end_protect_datatime = now_datatime + timedelta(seconds=content['TTL'])
         new = ProtectedObjects(
@@ -105,6 +106,7 @@ class Protect(Resource):
 
     def __cmd_pull(self):
         logger.debug(f'PULL')
+        self.__del_old_protect()
         objects = ProtectedObjects.query.all()
         response = {}
         for ob in objects:
@@ -117,6 +119,16 @@ class Protect(Resource):
             })
         response = {k: response[k] for k in sorted(response)}
         return response, 200
+
+    def __del_old_protect(self):
+        logger.debug(f'Del old protect objects')
+        objects = ProtectedObjects.query.all()
+        now_datatime = datetime.now()
+        for ob in objects:
+            logger.debug(ob.end_protect < now_datatime)
+            if ob.end_protect < now_datatime:
+                ProtectedObjects.query.filter_by(id=ob.id).delete()
+        db.session.commit()
 
 
 api.add_resource(Protect, '/')
