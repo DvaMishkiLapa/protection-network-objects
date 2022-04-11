@@ -125,7 +125,6 @@ class Protect(Resource):
         objects = ProtectedObjects.query.all()
         now_datatime = datetime.now()
         for ob in objects:
-            logger.debug(ob.end_protect < now_datatime)
             if ob.end_protect < now_datatime:
                 ProtectedObjects.query.filter_by(id=ob.id).delete()
         db.session.commit()
