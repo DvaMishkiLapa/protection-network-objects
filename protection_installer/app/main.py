@@ -89,18 +89,20 @@ class Protect(Resource):
         self.__del_old_protect()
         now_datatime = datetime.now()
         end_protect_datatime = now_datatime + timedelta(seconds=content['TTL'])
-        new = ProtectedObjects(
-            id=content['ID'],
-            defense=content['DEFENSE'],
-            start_protect=now_datatime,
-            end_protect=end_protect_datatime
-        )
-        try:
-            db.session.add(new)
-            db.session.commit()
-        except IntegrityError as e:
-            logger.error(f'Duplicate ID {content["ID"]}')
-            return {'ID': content['ID'], 'result': 'duplicate ID'}, 400
+        new_info = {
+            'id': content['ID'],
+            'defense': content['DEFENSE'],
+            'start_protect': now_datatime,
+            'end_protect': end_protect_datatime
+        }
+        check_row = ProtectedObjects.query.filter_by(id=content['ID'])
+        logger.debug(check_row.scalar())
+        if check_row.scalar() is None:
+            db.session.add(ProtectedObjects(**new_info))
+        else:
+            logger.debug(f'Duplicate ID {content["ID"]}, update')
+            check_row.update(new_info)
+        db.session.commit()
         return {'ID': content['ID'], 'result': 'ok'}, 200
 
     def __cmd_pull(self):
